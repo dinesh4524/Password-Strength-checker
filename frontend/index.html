@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShieldPass | Advanced Password Strength Analyzer</title>
+  <meta name="description" content="Check password strength in real time, calculate estimated time to crack, generate strong random passwords, and scan your history for password reuse.">
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Optional zxcvbn library via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/zxcvbn/4.4.2/zxcvbn.js" defer></script>
+</head>
+<body class="dark-theme">
+  <!-- Background Glows -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <!-- Header / Navigation -->
+  <header>
+    <div class="logo">
+      <svg class="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      <span>ShieldPass</span>
+    </div>
+    <div class="nav-controls">
+      <!-- Dark/Light Mode Toggle -->
+      <button id="theme-toggle" class="btn-icon" aria-label="Toggle Theme">
+        <svg id="sun-icon" class="theme-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="grid-layout">
+      <!-- Column 1: Password Analysis -->
+      <section class="card glass-card analyzer-section">
+        <h1 class="section-title">Password Strength Analyzer</h1>
+        <p class="section-subtitle">Real-time cryptographic check and crack estimation</p>
+
+        <!-- Input Field Container -->
+        <div class="input-group">
+          <label for="password-input" class="input-label">Enter Password</label>
+          <div class="input-wrapper">
+            <input type="password" id="password-input" placeholder="Type a password..." autocomplete="off">
+            <button id="toggle-password-visibility" class="btn-input-icon" aria-label="Toggle Password Visibility">
+              <!-- Eye open (default hidden) -->
+              <svg id="eye-open-icon" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <!-- Eye closed -->
+              <svg id="eye-closed-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Strength Meter -->
+        <div class="meter-container">
+          <div class="meter-header">
+            <span>Strength: <strong id="strength-label">Empty</strong></span>
+            <span id="strength-score-text">0%</span>
+          </div>
+          <div class="meter-bar-wrapper">
+            <div id="meter-fill" class="meter-fill"></div>
+          </div>
+        </div>
+
+        <!-- Cracking Time Estimation -->
+        <div class="crack-time-container">
+          <h3>Estimated Time to Crack</h3>
+          <div class="crack-grid">
+            <div class="crack-card">
+              <span class="crack-speed-label">Online Brute-Force</span>
+              <span class="crack-speed-desc">100 attempts/sec (e.g. web forms)</span>
+              <span id="time-online" class="crack-value">Instant</span>
+            </div>
+            <div class="crack-card">
+              <span class="crack-speed-label">Offline GPU Attack</span>
+              <span class="crack-speed-desc">10B attempts/sec (e.g. leaked hashes)</span>
+              <span id="time-offline" class="crack-value">Instant</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Suggestions panel -->
+        <div id="suggestions-box" class="suggestions-box hidden">
+          <h4>Improvement Tips</h4>
+          <ul id="suggestions-list">
+            <!-- Dynamically populated suggestions -->
+          </ul>
+        </div>
+      </section>
+
+      <!-- Column 2: Rules, Generator and Secure Auth Cloud Check -->
+      <div class="side-column">
+        <!-- Rules Card -->
+        <section class="card glass-card rules-card">
+          <h2 class="card-title">Security Checklist</h2>
+          <ul class="checklist">
+            <li id="rule-length" class="check-item unmet">
+              <span class="status-icon">✗</span>
+              <span>At least 8 characters</span>
+            </li>
+            <li id="rule-uppercase" class="check-item unmet">
+              <span class="status-icon">✗</span>
+              <span>Contains uppercase letter</span>
+            </li>
+            <li id="rule-lowercase" class="check-item unmet">
+              <span class="status-icon">✗</span>
+              <span>Contains lowercase letter</span>
+            </li>
+            <li id="rule-number" class="check-item unmet">
+              <span class="status-icon">✗</span>
+              <span>Contains a number</span>
+            </li>
+            <li id="rule-special" class="check-item unmet">
+              <span class="status-icon">✗</span>
+              <span>Contains special character</span>
+            </li>
+            <li id="rule-repeated" class="check-item met">
+              <span class="status-icon">✓</span>
+              <span>No consecutive repeated characters</span>
+            </li>
+            <li id="rule-common" class="check-item met">
+              <span class="status-icon">✓</span>
+              <span>Not on common password list</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Strong Password Generator Card -->
+        <section class="card glass-card generator-card">
+          <h2 class="card-title">Strong Password Tool</h2>
+          <div class="gen-settings">
+            <div class="range-group">
+              <div class="range-label">
+                <span>Length: <strong id="gen-len-val">16</strong></span>
+              </div>
+              <input type="range" id="gen-length" min="8" max="32" value="16" class="slider">
+            </div>
+
+            <div class="options-grid">
+              <label class="toggle-control">
+                <input type="checkbox" id="gen-upper" checked>
+                <span class="control-indicator"></span>
+                Uppercase (A-Z)
+              </label>
+              <label class="toggle-control">
+                <input type="checkbox" id="gen-lower" checked>
+                <span class="control-indicator"></span>
+                Lowercase (a-z)
+              </label>
+              <label class="toggle-control">
+                <input type="checkbox" id="gen-numbers" checked>
+                <span class="control-indicator"></span>
+                Numbers (0-9)
+              </label>
+              <label class="toggle-control">
+                <input type="checkbox" id="gen-special" checked>
+                <span class="control-indicator"></span>
+                Symbols (!@#$)
+              </label>
+            </div>
+            
+            <button id="generate-btn" class="btn btn-primary">Generate Strong Password</button>
+          </div>
+
+          <hr class="divider">
+
+          <!-- Suggestions container -->
+          <div class="suggestions-container">
+            <h3>Suggested Options</h3>
+            <div class="suggested-passwords-list">
+              <div class="suggestion-item">
+                <span id="suggest-1" class="suggestion-text">Generating...</span>
+                <button class="btn-copy" data-target="suggest-1" title="Copy Password">Copy</button>
+              </div>
+              <div class="suggestion-item">
+                <span id="suggest-2" class="suggestion-text">Generating...</span>
+                <button class="btn-copy" data-target="suggest-2" title="Copy Password">Copy</button>
+              </div>
+              <div class="suggestion-item">
+                <span id="suggest-3" class="suggestion-text">Generating...</span>
+                <button class="btn-copy" data-target="suggest-3" title="Copy Password">Copy</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Secure Auth Check Card -->
+        <section class="card glass-card auth-card">
+          <h2 class="card-title">Cloud History Scanner</h2>
+          <p class="auth-subtitle">Verify that passwords aren't reused across your account</p>
+
+          <!-- Guest/Anonymous View -->
+          <div id="auth-logged-out">
+            <div class="auth-tabs">
+              <button id="tab-login" class="tab-btn active">Login</button>
+              <button id="tab-register" class="tab-btn">Register</button>
+            </div>
+            
+            <form id="auth-form" class="auth-form">
+              <div class="form-group">
+                <input type="email" id="auth-email" placeholder="Email address" required>
+              </div>
+              <div class="form-group">
+                <input type="password" id="auth-password" placeholder="Password" required>
+              </div>
+              <button type="submit" id="auth-submit-btn" class="btn btn-secondary">Login</button>
+            </form>
+            <p id="auth-error-msg" class="error-text hidden"></p>
+          </div>
+
+          <!-- Logged In View -->
+          <div id="auth-logged-in" class="hidden">
+            <div class="user-profile">
+              <svg class="profile-avatar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              <div class="user-info">
+                <span id="user-email-display" class="user-email">user@example.com</span>
+                <span class="user-status-badge">Connected</span>
+              </div>
+            </div>
+
+            <div class="history-scanner-box">
+              <div id="scanner-status" class="scanner-status idle">
+                <span class="scanner-dot"></span>
+                <span id="scanner-text">Type a password to check for reuse</span>
+              </div>
+              <div class="history-actions">
+                <button id="save-history-btn" class="btn btn-tertiary" disabled>Save current password to history</button>
+              </div>
+            </div>
+
+            <button id="logout-btn" class="btn btn-logout">Disconnect Account</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>College Cryptography Project Submission &copy; 2026. Made with ShieldPass.</p>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden">Copied to clipboard!</div>
+
+  <script src="app.js"></script>
+</body>
+</html>
